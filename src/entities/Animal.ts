@@ -4,15 +4,13 @@ export class Animal {
     public view: PIXI.Container;
     public isFollowing: boolean = false;
     
-    private walkSprite?: PIXI.AnimatedSprite;
-    private idleSprite?: PIXI.AnimatedSprite;
+    private walkSprite!: PIXI.AnimatedSprite;
+    private idleSprite!: PIXI.AnimatedSprite;
     private currentSprite?: PIXI.AnimatedSprite;
     
     private patrolTarget: PIXI.Point;
     private moveSpeed: number = 2;
-
-    private patrolWaitTimer: number = 0;
-    private isWaiting: boolean = false;
+    private patrolIntervalId?: number;
 
     constructor(x: number, y: number) {
         this.view = new PIXI.Container();
@@ -20,10 +18,26 @@ export class Animal {
         this.patrolTarget = new PIXI.Point(x, y);
         
         this.initAnimations();
+        this.startPatrolLoop(); // Start the infinite loop
+    }
+
+    private startPatrolLoop(): void {
+        // Pick a new target every 4-6 seconds infinitely
+        this.patrolIntervalId = window.setInterval(() => {
+            if (!this.isFollowing) {
+                this.pickNewTarget();
+            }
+        }, 4000 + Math.random() * 2000);
+    }
+
+    private pickNewTarget(): void {
+        this.patrolTarget.set(
+            50 + Math.random() * 700,
+            50 + Math.random() * 500
+        );
     }
 
     private async initAnimations(): Promise<void> {
-        // Animal frames from assets
         const walkFrames = [
             '/assets/sheep/sheep_walk/sheep_walk_left_0001.png',
             '/assets/sheep/sheep_walk/sheep_walk_left_0002.png',
@@ -41,7 +55,6 @@ export class Animal {
         ];
 
         try {
-            // Load textures from cache (pre-loaded in Game.ts)
             const walkTextures = await Promise.all(walkFrames.map(f => PIXI.Assets.load(f)));
             const idleTextures = await Promise.all(idleFrames.map(f => PIXI.Assets.load(f)));
 
@@ -80,64 +93,36 @@ export class Animal {
         const prevY = this.view.y;
 
         if (this.isFollowing) {
-            // Follow the Main Hero
-            this.moveTo(heroPos.x, heroPos.y, this.moveSpeed + 1);
+            // Follow the hero with a 40px buffer
+            this.moveToward(heroPos.x, heroPos.y, this.moveSpeed + 1, 40);
         } else {
-            // Additional AC: Patrol logic
-            this.patrol();
+            // Move toward the target chosen by the setInterval
+            this.moveToward(this.patrolTarget.x, this.patrolTarget.y, this.moveSpeed, 2);
         }
 
-        // Determine if walking or idle based on movement
+        // Animation triggers automatically if position changed
         const isMoving = Math.abs(this.view.x - prevX) > 0.1 || Math.abs(this.view.y - prevY) > 0.1;
         this.switchAnimation(isMoving ? 'walk' : 'idle');
     }
 
-    private moveTo(tx: number, ty: number, speed: number): void {
+    private moveToward(tx: number, ty: number, speed: number, buffer: number): void {
         const dx = tx - this.view.x;
         const dy = ty - this.view.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
-        // Keep a distance buffer from the target
-        if (dist > 40) {
+        if (dist > buffer) {
             this.view.x += (dx / dist) * speed;
             this.view.y += (dy / dist) * speed;
 
-            // Flip sprite for right-left view
             if (this.currentSprite) {
                 this.currentSprite.scale.x = dx > 0 ? -1 : 1;
             }
         }
     }
 
-   private patrol(): void {
-    const dist = Math.sqrt(
-        Math.pow(this.patrolTarget.x - this.view.x, 2) + 
-        Math.pow(this.patrolTarget.y - this.view.y, 2)
-    );
-
-    // 1. Check if we reached the current destination
-    if (dist < 5) {
-        if (!this.isWaiting) {
-            // Start waiting: Set a random interval between 1 and 4 seconds
-            // (Assuming 60 FPS, so 60 to 240 frames)
-            this.isWaiting = true;
-            this.patrolWaitTimer = Math.floor(Math.random() * 180) + 60; 
-        }
-
-        // 2. Countdown the wait timer
-        if (this.patrolWaitTimer > 0) {
-            this.patrolWaitTimer--;
-        } else {
-            // 3. Timer finished! Pick a new random target and stop waiting
-            this.isWaiting = false;
-            this.patrolTarget.set(
-                Math.max(50, Math.min(750, Math.random() * 800)),
-                Math.max(50, Math.min(550, Math.random() * 600))
-            );
-        }
-    } else {
-        // 4. Move toward the target if we aren't there yet
-        this.moveTo(this.patrolTarget.x, this.patrolTarget.y, this.moveSpeed);
+    // Clean up memory if the animal is removed
+    public destroy(): void {
+        if (this.patrolIntervalId) clearInterval(this.patrolIntervalId);
+        this.view.destroy({ children: true });
     }
-}
 }
