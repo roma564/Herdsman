@@ -10,10 +10,10 @@ export class Game {
     private yard!: Yard;
     private ui!: UIManager;
     private animals: Animal[] = [];
-    private group: Animal[] = []; // Max number of animals in the group is 5 [cite: 12]
+    private group: Animal[] = []; 
 
     constructor() {
-        // In PixiJS v8, create the instance first, then call async init()
+       
         this.app = new PIXI.Application();
         this.init();
     }
@@ -23,37 +23,37 @@ export class Game {
         await this.app.init({
             width: 800,
             height: 600,
-            backgroundColor: 0x228B22, // Green area for the game field [cite: 6]
+            backgroundColor: 0x228B22, // Green area for the game field 
             resolution: window.devicePixelRatio || 1,
             autoDensity: true,
         });
 
-        // AC 1: Add the canvas to the document [cite: 6]
+        // AC 1: Add the canvas to the document
         document.body.appendChild(this.app.canvas);
 
         // Enable PixiJS DevTools for debugging
         (globalThis as any).__PIXI_APP__ = this.app;
 
-        // AC 3: Destination point (yard - yellow area) [cite: 8]
+        // AC 3: Destination point (yard - yellow area) 
         this.yard = new Yard(700, 500);
         this.app.stage.addChild(this.yard.view);
 
-        // AC 1: Main Hero (red circle) [cite: 6]
+        // AC 1: Main Hero (red circle) 
         this.hero = new Hero(400, 300);
         this.app.stage.addChild(this.hero.view);
 
-        // AC 4: Score UI at the top [cite: 9]
+        // AC 4: Score UI at the top  9]
         this.ui = new UIManager();
         this.app.stage.addChild(this.ui.view);
 
-        // AC 5: Click on field to move Main Hero [cite: 10]
+        // AC 5: Click on field to move Main Hero  
         this.app.stage.eventMode = 'static';
         this.app.stage.hitArea = this.app.screen;
         this.app.stage.on('pointerdown', (e) => {
             this.hero.setTarget(e.global.x, e.global.y);
         });
 
-        // AC 2: Spawn random number of animals at random positions [cite: 7]
+        // AC 2: Spawn random number of animals at random positions  
         this.spawnAnimals(Math.floor(Math.random() * 5) + 5);
 
         // Start the central game loop
@@ -77,7 +77,7 @@ export class Game {
             // Update each animal (checks following state)
             animal.update(this.hero.view.position);
 
-            // AC 6: Collection logic - follow if close and group < 5 [cite: 11, 12]
+            // AC 6: Collection logic - follow if close and group 
             if (!animal.isFollowing && this.group.length < 5) {
                 if (this.getDistance(this.hero.view, animal.view) < 50) {
                     animal.isFollowing = true;
@@ -85,7 +85,7 @@ export class Game {
                 }
             }
 
-            // AC 7: Scoring logic - reach yard while following [cite: 13]
+            // AC 7: Scoring logic - reach yard while following  
             if (animal.isFollowing && this.getDistance(animal.view, this.yard.view) < 40) {
                 this.collectAnimal(animal);
             }
@@ -100,7 +100,7 @@ export class Game {
         this.group = this.group.filter(a => a !== animal);
         this.animals = this.animals.filter(a => a !== animal);
         this.app.stage.removeChild(animal.view);
-        // AC 7: Increment score value [cite: 13]
+        // AC 7: Increment score value  
         this.ui.updateScore(1); 
     }
 }
